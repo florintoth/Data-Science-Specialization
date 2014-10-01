@@ -1,2 +1,2 @@
-# An Introduction to Interactive Programming in Python
-Projects for the Coursera class
+# The Data Scientist Toolbox
+First commit for the Data Science Specialization Courses
