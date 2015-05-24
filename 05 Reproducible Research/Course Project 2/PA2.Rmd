@@ -1,0 +1,123 @@
+
+# Reproducible Research: Peer Assessment 2
+
+## The Impact of Severe Weather Events on Public Health and Economy in the United States
+
+### Synopsis
+
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern. This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. Based on this data we found that tornados and excessive heat
+generate the highest number of fatalities and injuries while tornados, floods and powerful winds incur the highest
+economic damages.
+
+### Data Processing
+
+```{r, echo = TRUE, warning = FALSE}
+suppressMessages(library(R.utils))
+suppressMessages(library(ggplot2))
+```
+
+Here we download and unzip the data set.
+
+```{r, echo = TRUE}
+
+if (!"StormData.csv.bz2" %in% dir("./data/")) {
+  download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", destfile = "data/StormData.csv.bz2")   
+  bunzip2("data/StormData.csv.bz2", overwrite=TRUE, remove=FALSE)
+}
+
+```
+
+Then we read the data in R.
+
+```{r, echo = TRUE}
+
+if (!"StormData" %in% ls()) {
+    StormData <- read.csv("data/StormData.csv", sep = ",")
+}
+dim(StormData)
+```
+
+We extract the variables related to fatalities, injuries, property and crop damages along with the event type.
+
+```{r, echo = TRUE}
+
+StormDataVar <- c("EVTYPE","FATALITIES","INJURIES","PROPDMG","CROPDMG")
+newStormData <- subset(StormData, select=StormDataVar)
+```
+
+We now aggregate the damages on event types.
+
+```{r, echo = TRUE}
+StormDataVar1 <- c("FATALITIES","INJURIES","PROPDMG","CROPDMG")
+StormDamage <- aggregate(newStormData[StormDataVar1], list(newStormData$EVTYPE), sum)
+summary(StormDamage)
+```
+
+It is also a good idea to delete the rows with only zeros in the damages columns.
+
+```{r, echo = TRUE}
+StormDamage <- StormDamage[rowSums(StormDamage[, -1]>0) != 0, ]
+```
+
+Then we should combine the damages from property and crops into one variable since they are monetary based.
+
+```{r, echo = TRUE}
+StormDamage$ECONOMIC <- StormDamage$PROPDMG + StormDamage$CROPDMG
+StormDamage$CROPDMG = NULL
+StormDamage$PROPDMG = NULL
+```
+
+### Results
+
+#### Most Harmful Events Based on the Number of Fatalities
+
+
+```{r, echo = TRUE}
+fatalities <- data.frame(StormDamage$Group.1,StormDamage$FATALITIES)
+names(fatalities) <- c("EVTYPE","FATALITIES")
+fatalities <- fatalities[order(-fatalities$FATALITIES),]
+fatalities <- head(fatalities,10)
+ggplot(data=fatalities, aes(x = reorder(EVTYPE, FATALITIES), y = FATALITIES)) + 
+    geom_bar(stat="identity", fill="red") + coord_flip() +
+    xlab("") + ylab("Number of Fatalities") + 
+    ggtitle("Top 10 Events With Most Fatalities") +
+    theme(plot.title = element_text(lineheight=10, face="bold")) 
+```
+
+#### Most Harmful Events Based on the Number of Injuries
+
+```{r, echo = TRUE}
+injuries <- data.frame(StormDamage$Group.1,StormDamage$INJURIES)
+names(injuries) <- c("EVTYPE","INJURIES")
+injuries <- injuries[order(-injuries$INJURIES),]
+injuries <- head(injuries,10)
+ggplot(data=injuries, aes(x = reorder(EVTYPE, INJURIES), y = INJURIES)) + 
+    geom_bar(stat="identity", fill="red") + coord_flip() +
+    xlab("") + ylab("Number of Injuries") + 
+    ggtitle("Top 10 Events With Most Injuries") +
+    theme(plot.title = element_text(lineheight=10, face="bold"))
+```
+
+#### Most Harmful Events Based on Economic Damages
+
+```{r, echo = TRUE}
+
+economic <- data.frame(StormDamage$Group.1,StormDamage$ECONOMIC)
+names(economic) <- c("EVTYPE","ECONOMIC")
+economic <- economic[order(-economic$ECONOMIC), ]
+economic <- head(economic,10)
+economic$ECONOMIC <- economic$ECONOMIC/1000
+ggplot(data=economic, aes(x = reorder(EVTYPE, ECONOMIC), y = ECONOMIC)) + 
+    geom_bar(stat="identity", fill="red") + coord_flip() +
+    xlab("") + ylab("Economic Damages (USD thousands)") + 
+    ggtitle("Top 10 Events With Most Economic Damages") +
+    theme(plot.title = element_text(lineheight=10, face="bold"))
+
+```
+
+### Conclusion
+
+Based on this analysis we found that **tornados** and **excessive heat** are the most harmful to the population
+health while **tornados**, **flash floods** and **thunderstorm winds** generate bigges economic damages.
+
+
