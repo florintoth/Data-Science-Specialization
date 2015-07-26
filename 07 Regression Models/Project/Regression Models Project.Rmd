@@ -1,0 +1,136 @@
+---
+output: html_document
+---
+# How transmission type affects fuel consumption?
+
+### Regression Models Project by Florin Toth
+
+## Executive Summary
+
+In this report we are looking at a data set of a collection of cars (mtcars). We are interested in exploring the relationship between a set of variables and miles per gallon (MPG). We are particularly interested in answering the following two questions: "Is an automatic or manual transmission better for MPG?" and "Quantify the MPG difference between automatic and manual transmissions?"
+We use exploratory data analyses and regression models to answer these questions. The transmission is **automatic** when variable **am**=0 and **manual** when **am**=1.
+
+At first we find that cars with manual transmission have on average 7.245 miles per gallon more than those with automatic transmission. Then, we fit several other linear regression models that include more independent variables and select the one with the highest adjusted R-squared value. We find that weight ("wt") and quarter mile time ("qsec") along with transmission ("am") are together better predictors of fuel efficiency ("mpg") though the influence of the manual transmission on the fuel efficiency is reduced to 2.936 miles per gallon on average. 
+
+## Exploratory Data Analysis  
+
+Before delving into regression analysis we need to have an overview of the data set.
+First we load and check the data set. 
+
+```{r}
+data(mtcars)
+str(mtcars)
+```   
+
+Then we plot the data. We use a boxplot to check the relationship between the **mpg**
+and **am**, our variables of interest, i.e. between miles per gallon and transmission type.
+We notice manual transmission corresponds to higher values of miles per gallon.
+
+Using a pairs graph we then check the relationships among all variables in the data set.
+Here we find strong correlations between (independent) variables "wt", "disp" and "cyl".
+Please see **Figure 1** and **Figure 2** in the **Appendix** below.
+
+## Regression Analysis  
+
+First we check a simple model to see if transmission type ("am", the independent variable)
+has a significant impact on the miles per gallon ("mpg", the dependent variable)
+
+```{r}
+library(broom) # package for better display of summary statistics
+modelSimple <- lm(mpg ~ am, data=mtcars)
+glance(modelSimple)[c(1:3,11,5)]
+tidy(modelSimple)
+```  
+
+This model shows that transmission type has significant influence on miles per gallon given the low p-values. It also shows that if the transmission is manual, the "mpg" has an  average increase of 7.245 (also as expected from the boxplot discussed above).
+
+This model has an adjusted R-squared value of 0.3385 meaning that the model can explain only about 34% of the variance of the "mpg" variable. The sigma (the residual standard error) of the model is 4.902 on 30 degrees of freedom.  
+
+Now we will check a model to see how all variables impact the miles per gallon ("mpg").
+
+```{r}
+modelFull <- lm(mpg ~ ., data=mtcars)
+glance(modelFull)[c(1:3,11,5)]
+tidy(modelFull)
+```  
+The adjusted R-squared value is 0.807, explaining around 80% of the variance of the "mpg" variable. However, none of the coefficients are significant at 0.05 significant level.
+The residual standard error (sigma) of the model is 2.65 on 21 degrees of freedom.
+
+We need to find a better model, with less independent variables, less potential multicollinearity issues and significant coefficients. We can either try removing variables selectively on trial and error basis or we can use the "step" function that chooses a model in a stepwise algorithm.
+
+```{r, results='hide'}
+modelStep <- step(modelFull)
+summary(modelStep)
+```  
+```{r}
+glance(modelStep)[c(1:3,11,5)]
+tidy(modelStep)
+```  
+
+The model selected by the "step" function above is "mpg ~ wt + qsec + am". 
+The adjusted R-squared value is 0.8336, meaning that the model can explain about 83% of the variance of the "mpg" variable, more than the previous models and all of the coefficients are significant at 0.05 significant level. The residual standard error (sigma) is 2.459 on 28 degrees of freedom.
+
+Therefore, if we take into account the weight ("wt") and quarter mile time ("qsec") variables, the manual transmission translates into only 2.936 miles per gallon ("mpg") more than the cars with automatic transmission.
+
+The last model seems to be the best but we can also use "anova" function to choose between
+the modelStep and modelFull as compared to modelSimple (the first one with only "am" as
+independent variable). "Anova" tests the models against each other in the order specified.
+
+```{r}
+anova(modelSimple, modelStep, modelFull)
+``` 
+
+As results show, the modelStep is selected and also has the biggest adjusted R-squared value. **Figure 3** in the **Appendix** shows a comparison between the estimates of the variables from the modelFull vs modelStep selected. It shows that the estimates in the modelStep remain with the same sign after adding the potential errors as opposed the the full model where the estimates change sign frequently.
+
+Finaly we check a diagnostic plot of our modelStep regression in **Figure 4** from the **Appendix**. The residual plots do not show any consistent pattern, seem randomly and normally distributed and do not have significant oultiers.
+
+
+# Appendix
+
+### Figure 1: Boxplot of MPG vs Manual/Automatic
+
+```{r}
+library(ggplot2)
+g <- ggplot(mtcars, aes(x=factor(am), y=mpg))
+g <- g + geom_boxplot()
+g <- g + xlab("Manual (am=1) / Automatic (am=0)") + ylab("Miles per Gallon")
+g <- g + ggtitle("Boxplot of MPG vs Manual/Automatic")
+g
+```  
+
+### Figure 2: Pairs Graph of Variables
+
+```{r}
+pairs(mtcars, panel=panel.smooth, main="Pairs Graph of Variables")
+```  
+
+### Figure 3: Comparison Chart between Full Model & Step Model Estimates
+
+```{r}
+library(gridExtra)
+
+modelPlot <- tidy(modelFull, conf.int = TRUE)
+g1 <- ggplot(modelPlot, aes(estimate, term, color = term))
+g1 <- g1 + geom_point()
+g1 <- g1 + geom_errorbarh(aes(xmin = conf.low, xmax = conf.high))
+g1 <- g1 + geom_vline()
+g1 <- g1 + xlab("Estimates") + ylab("Variables")
+g1 <- g1 + ggtitle("Plot of Full Model Estimates")
+
+modelPlot <- tidy(modelStep, conf.int = TRUE)
+g2 <- ggplot(modelPlot, aes(estimate, term, color = term))
+g2 <- g2 + geom_point()
+g2 <- g2 + geom_errorbarh(aes(xmin = conf.low, xmax = conf.high))
+g2 <- g2 + geom_vline()
+g2 <- g2 + xlab("Estimates") + ylab("Variables")
+g2 <- g2 + ggtitle("Plot of Step Model Estimates")
+
+grid.arrange(g1, g2, nrow = 2)
+``` 
+
+### Figure 4: Diagnostic Graphics of modelStep
+
+```{r}
+par(mfrow = c(2, 2))
+plot(modelStep)
+``` 
