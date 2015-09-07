@@ -1,0 +1,132 @@
+# Practical Machine Learning Project - Human Activity Recognition Report by Florin Toth
+## Introduction
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible 
+to collect a large amount of data about personal activity relatively inexpensively. 
+These type of devices are part of the quantified self movement - a group of 
+enthusiasts who take measurements about themselves regularly to improve their health, 
+to find patterns in their behavior, or because they are tech geeks. One thing that 
+people regularly do is quantify how much of a particular activity they do, but they
+rarely quantify how well they do it. 
+
+In this project, our goal will be to use data from accelerometers on the belt, 
+forearm, arm, and dumbell of 6 participants. 
+
+They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+More information is available from the website here: 
+http://groupware.les.inf.puc-rio.br/har.
+
+The goal of this project is to predict the manner in which they did the exercise. 
+This is the "classe" variable in the training set. 
+
+## Data Cleaning 
+
+The training data for this project are available here: 
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: 
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+```{r}
+trainData <- read.csv("pml-training.csv",header=T)
+testData <- read.csv("pml-testing.csv",header=T)
+nrow(trainData);ncol(trainData)
+nrow(testData);ncol(testData)
+```
+The training data set contains 19622 observations and 160 variables, while the testing data set contains 20 observations and 160 variables.
+
+Using *summary(trainData)* and *summary(testData)* for data exploration we notice there are many missing obeservations we need to remove.
+
+```{r}
+trainData <- trainData[, colSums(is.na(trainData)) == 0] 
+testData <- testData[, colSums(is.na(testData)) == 0] 
+nrow(trainData);ncol(trainData)
+nrow(testData);ncol(testData)
+``` 
+
+The training data set now contains 19622 observations and 93 variables, while the testing data set now contains 20 observations and 60 variables.
+
+We also notice some variables that have no influence to the accelerometer measurements.
+These happen to be the first 7 variables that we can remove from both train and test data sets.
+
+```{r}
+trainData <- trainData[,-c(1:7)]
+testData <- testData[,-c(1:7)]
+nrow(trainData);ncol(trainData)
+nrow(testData);ncol(testData)
+```
+The training data set now contains 19622 observations and 86 variables, while the testing data set now contains 20 observations and 53 variables.
+
+In order to simplify the model we also remove all variables that are not numeric except for the "classe" variable from the training data set.
+
+```{r}
+classe <- trainData$classe # saving the "classe" variable
+trainData <- trainData[, sapply(trainData, is.numeric)]
+trainData$classe <- classe # adding it back
+nrow(trainData);ncol(trainData)
+nrow(testData);ncol(testData)
+```
+
+Now the training data set contains 19622 observations and 53 variables, while the testing data set contains 20 observations and 53 variables with the 5-levels "classe" factor variable being kept in the training data set.
+
+## Data slicing
+
+Now we have a clean data set for training but we also need a subset of this data set for validation. Therefore we split the training dataset using the usual 70%/30% ratios to get a validation data set.
+
+```{r, message=F, warning=F}
+library(caret)
+```
+```{r}
+set.seed(12345)
+inTrain <- createDataPartition(trainData$classe, p=0.70, list=FALSE)
+training <- trainData[inTrain, ]
+testing <- trainData[-inTrain, ]
+```
+
+## Data Modelling
+
+We will fit a predictive model using *random forest* algorithm on all variables since it gives the most accurate results even though it is pretty slow and quite difficult to describe. We will also use *k-fold cross validation* with 5 folds, based on the 5-levels "classe" factor variable we use. We also cap the number of proccessed trees to 100.
+
+```{r, message=F, warning=F}
+library(randomForest)
+```
+```{r}
+modelRF <- train(classe ~ ., data=training, method="rf", 
+                 trControl=trainControl(method="cv", 5), ntree=100)
+modelRF
+```
+
+We get an accuracy of: 0.9905
+```{r}
+modelRF$results[1,2]
+```
+and an in sample error of: 0.009463
+```{r}
+1-modelRF$results[1,2]
+```
+
+Based on this model we test its predictive performance on the validation data set.  
+
+```{r}
+predictRF <- predict(modelRF, testing)
+confusionMatrix(testing$classe, predictRF)
+```
+We get an accuracy of: 0.9886
+```{r}
+confusionMatrix(testing$classe, predictRF)$overall[1]
+```
+and an out of sample error of: 0.011385
+```{r}
+1-as.numeric(confusionMatrix(testing$classe, predictRF)$overall[1])
+```
+
+We notice that the out of sample error is slightly higher than the in sample error. This indicates a possible over-fitting model with very high accuracy that captures both the signal and the noise. This is one of the drawbacks of a random forrest model but since the sample error difference is not so big we conclude that overall the model is very good.
+
+## Predicting on the provided dataset
+
+We apply the model to testData, the cleaned provided testing dataset. We noticed the testing dataset has a last column named "problem_id" which we need to remove since it is not related to our analysis.
+
+```{r}
+prediction <- predict(modelRF, testData[, -length(testData)])
+prediction
+```  
