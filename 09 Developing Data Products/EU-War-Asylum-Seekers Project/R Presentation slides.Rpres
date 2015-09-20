@@ -1,0 +1,62 @@
+War Asylum Seekers in European Countries
+========================================================
+
+by Florin TOTH
+
+September 2015
+
+
+Question
+========================================================
+
+The year 2015 sees a huge increase of asylum seekers coming to Europe from 
+various war-torn countries around the globe. 
+
+Is this the start of a new trend in migration or is it part of an already
+developing trend?
+
+
+Attempt to Answer
+========================================================
+
+To answer this question we chose six war-torn countries:
+
+- Afghanistan
+- Iraq
+- Libya
+- Syria
+- Ukraine
+- Yemen
+
+Using EUROSTAT data we visualized the number of asylum applications in all 
+European countries from citizens of these six countries between 2008 and 2014.
+
+
+Example
+========================================================
+
+This is a chart showing the number of asylum applications in **Austria** from
+all six war-torn countries.
+
+```{r, echo=FALSE}
+migrantData <- read.csv("migr_asyappctza_1_Data.csv", stringsAsFactors = F)
+migrantData$Value <- gsub(":","0", migrantData$Value)
+migrantData$Value <- gsub(",","", migrantData$Value)
+migrantData$Value <- as.numeric(migrantData$Value)
+migrantData$TIME <- as.character(migrantData$TIME)
+```
+```{r, echo=FALSE}
+migrantOriginHost <- subset(migrantData, migrantData$GEO=="Austria")
+g <- ggplot(data = migrantOriginHost, aes(x = TIME,y = Value, group=CITIZEN, color=CITIZEN))
+g <- g + geom_line(size=1) 
+g <- g + geom_point()
+g
+```
+
+Links to Check for Yourself
+========================================================
+
+The Shiny App is deployed at: https://florintoth.shinyapps.io/EU-War-Asylum-Seekers
+
+The GitHub repository: http://bit.ly/1OnpdPG
+
