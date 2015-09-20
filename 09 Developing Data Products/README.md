@@ -1,4 +1,5 @@
-Developing Data Products Project - War Asylum Seekers in European Countries
+Developing Data Products Project - 
+War Asylum Seekers in European Countries
 ==========================================================
 
 This Shiny App is for visulizating the annual aggregated data of asylum applicants by citizenship in European countries.    
@@ -11,4 +12,5 @@ The Shiny App is deployed at: https://florintoth.shinyapps.io/EU-War-Asylum-Seek
 
 The slide deck is at: http://rpubs.com/florited/110366
 
+The GitHub repository: http://bit.ly/1iq11yK
 
